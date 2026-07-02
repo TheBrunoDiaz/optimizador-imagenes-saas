@@ -60,4 +60,12 @@ writeFileSync(
   makePng(4100, 4100, (x, y) => [(x + y) % 256, 128, (x * y) % 256, 255]),
 )
 
+// Carpetas para el modo "Carpetas": lote/EventoA (2 imgs) y lote/EventoB (1 img).
+const lote = join(outDir, 'lote')
+mkdirSync(join(lote, 'EventoA'), { recursive: true })
+mkdirSync(join(lote, 'EventoB'), { recursive: true })
+writeFileSync(join(lote, 'EventoA', 'a.png'), makePng(300, 200, noisy))
+writeFileSync(join(lote, 'EventoA', 'b.png'), makePng(320, 240, noisy))
+writeFileSync(join(lote, 'EventoB', 'c.png'), makePng(280, 180, noisy))
+
 console.log('Fixtures escritas en', outDir)

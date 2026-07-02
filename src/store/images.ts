@@ -4,8 +4,10 @@ import type {
   OptimizeSettings,
   ResizeSettings,
   Step,
+  UploadMode,
 } from '../types'
 import { loadImageMeta } from '../lib/decode'
+import { folderOf } from '../lib/folders'
 import { processImage } from '../lib/pipeline'
 import { WorkerPool } from '../lib/pool'
 import { isLikelyHeic } from '../lib/resizeMath'
@@ -31,6 +33,7 @@ interface ImagesState {
   resize: ResizeSettings
   optimize: OptimizeSettings
   step: Step
+  mode: UploadMode
   processing: boolean
 
   addFiles: (files: File[]) => Promise<void>
@@ -40,6 +43,7 @@ interface ImagesState {
   setResize: (patch: Partial<ResizeSettings>) => void
   setOptimize: (patch: Partial<OptimizeSettings>) => void
   setStep: (step: Step) => void
+  setMode: (mode: UploadMode) => void
   process: () => Promise<void>
 }
 
@@ -63,6 +67,7 @@ export const useImages = create<ImagesState>((set, get) => {
     resize: defaultResize,
     optimize: defaultOptimize,
     step: 'upload',
+    mode: 'images',
     processing: false,
 
     async addFiles(files) {
@@ -76,6 +81,7 @@ export const useImages = create<ImagesState>((set, get) => {
             id,
             file,
             name: file.name,
+            folder: folderOf(file),
             originalSize: file.size,
           }
           if (isLikelyHeic(file)) {
@@ -133,6 +139,7 @@ export const useImages = create<ImagesState>((set, get) => {
         resize: defaultResize,
         optimize: defaultOptimize,
         step: 'upload',
+        mode: 'images',
         processing: false,
       })
     },
@@ -147,6 +154,10 @@ export const useImages = create<ImagesState>((set, get) => {
 
     setStep(step) {
       set({ step })
+    },
+
+    setMode(mode) {
+      set({ mode })
     },
 
     async process() {

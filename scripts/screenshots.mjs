@@ -32,6 +32,23 @@ await page.screenshot({ path: join(outDir, '03-optimize.png') })
 await page.getByRole('button', { name: /^Procesar/ }).click()
 await page.getByText(/imágenes optimizadas/).waitFor({ timeout: 90_000 })
 await page.screenshot({ path: join(outDir, '04-download.png') })
+await page.close()
+
+// --- Modo Carpetas ---
+const page2 = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+await page2.goto('http://localhost:4173/')
+await page2.getByRole('button', { name: /Carpetas/ }).click()
+await page2.screenshot({ path: join(outDir, '05-folders-upload.png') })
+
+await page2.setInputFiles('input[type=file]', join(fixtures, 'lote'))
+await page2.getByText('Opciones de redimensión').waitFor()
+await page2.screenshot({ path: join(outDir, '06-folders-resize.png') })
+
+await page2.getByRole('button', { name: /Siguiente: optimizar/ }).click()
+await page2.getByRole('button', { name: /^Procesar/ }).click()
+await page2.getByText(/carpetas ·/).waitFor({ timeout: 90_000 })
+await page2.screenshot({ path: join(outDir, '07-folders-download.png') })
+await page2.close()
 
 await browser.close()
 console.log('Capturas en', outDir)

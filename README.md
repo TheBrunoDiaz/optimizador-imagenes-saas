@@ -11,9 +11,22 @@ Flujo en 4 pasos: **Subir → Redimensionar → Optimizar para web → Descargar
 ![Paso de redimensión](docs/screenshot-redimensionar.png)
 ![Paso de descarga](docs/screenshot-descarga.png)
 
+## Dos modos de trabajo
+
+Se eligen con el selector de la pantalla de inicio:
+
+- **Imágenes sueltas** — un lote de imágenes → una descarga (individual o un ZIP).
+- **Carpetas** — subes varias carpetas y cada una se descarga como **su propio ZIP**
+  (o todo en un único ZIP con subcarpetas). Las imágenes se agrupan por la carpeta que
+  las contiene.
+
+![Modo carpetas](docs/screenshot-carpetas.png)
+
 ## Características
 
 - 📦 **Lote**: arrastra y suelta varias imágenes a la vez.
+- 🗂️ **Modo carpetas**: sube varias carpetas y obtén **un ZIP por carpeta** (o todo
+  en un único ZIP con subcarpetas). Ideal para conversiones repetidas y organizadas.
 - 📐 **Redimensionar** por píxeles (ancho/alto, mantener proporción, no agrandar) o
   por porcentaje (25 / 50 / 75 % o personalizado).
 - 🗜️ **Optimizar para web**: salida en **WebP** (recomendado), **JPG** (MozJPEG),

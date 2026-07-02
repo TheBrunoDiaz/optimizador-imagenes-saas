@@ -47,6 +47,8 @@ export interface ImageItem {
   id: string
   file: File
   name: string
+  /** Carpeta que contiene la imagen. "" = imagen suelta (sin carpeta). */
+  folder: string
   originalWidth: number
   originalHeight: number
   originalSize: number
@@ -57,3 +59,6 @@ export interface ImageItem {
 }
 
 export type Step = 'upload' | 'resize' | 'optimize' | 'download'
+
+/** Modo de subida: imágenes sueltas (v1) o carpetas (ZIP por carpeta). */
+export type UploadMode = 'images' | 'folders'

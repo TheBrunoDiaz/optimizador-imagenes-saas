@@ -5,6 +5,7 @@ import { ImageGrid } from './components/ImageGrid'
 import { ResizePanel } from './components/ResizePanel'
 import { OptimizePanel } from './components/OptimizePanel'
 import { DownloadPanel } from './components/DownloadPanel'
+import { UploadModeToggle } from './components/UploadModeToggle'
 import { Button } from './components/ui/Button'
 
 export default function App() {
@@ -34,7 +35,10 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <Dropzone />
+              <div>
+                <UploadModeToggle />
+                <Dropzone />
+              </div>
             )}
           </section>
         )}
@@ -53,10 +57,10 @@ export default function App() {
         )}
 
         {step === 'download' && (
-          <section className="space-y-6">
+          <div className="space-y-6">
             <DownloadPanel />
             <ImageGrid />
-          </section>
+          </div>
         )}
       </main>
 

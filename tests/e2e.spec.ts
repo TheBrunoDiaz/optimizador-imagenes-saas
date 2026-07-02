@@ -77,3 +77,42 @@ test('varias imágenes (incl. >16MP): procesa y descarga un ZIP con las 3', asyn
   const centralHeaders = countOccurrences(buf, Buffer.from([0x50, 0x4b, 0x01, 0x02]))
   expect(centralHeaders).toBe(3)
 })
+
+test('modo carpetas: agrupa por carpeta, ZIP por carpeta y ZIP combinado', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Carpetas/ }).click()
+  // Subir el directorio completo (Playwright fija webkitRelativePath por archivo).
+  await page.setInputFiles('input[type=file]', join(fixtures, 'lote'))
+
+  await expect(page.getByText('Opciones de redimensión')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'EventoA' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'EventoB' })).toBeVisible()
+
+  await page.getByRole('button', { name: /Siguiente: optimizar/ }).click()
+  await page.getByRole('button', { name: /^Procesar/ }).click()
+  await expect(page.getByText(/carpetas ·/)).toBeVisible({ timeout: 60_000 })
+
+  // (a) ZIP de la carpeta EventoA (2 imágenes) — apuntamos a SU sección.
+  const eventoA = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: 'EventoA' }) })
+  const [zipA] = await Promise.all([
+    page.waitForEvent('download'),
+    eventoA.getByRole('button', { name: /Descargar ZIP/ }).click(),
+  ])
+  expect(zipA.suggestedFilename()).toBe('EventoA.zip')
+  const bufA = readFileSync(await zipA.path())
+  expect(countOccurrences(bufA, Buffer.from([0x50, 0x4b, 0x01, 0x02]))).toBe(2)
+
+  // (b) Combinado: 3 imágenes bajo subcarpetas EventoA/ y EventoB/.
+  const [zipAll] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Todo en un \.zip/ }).click(),
+  ])
+  const bufAll = readFileSync(await zipAll.path())
+  expect(countOccurrences(bufAll, Buffer.from([0x50, 0x4b, 0x01, 0x02]))).toBe(3)
+  expect(bufAll.includes(Buffer.from('EventoA/'))).toBe(true)
+  expect(bufAll.includes(Buffer.from('EventoB/'))).toBe(true)
+})

@@ -1,12 +1,19 @@
 import { useMemo, useState } from 'react'
 import { useImages } from '../store/images'
-import { downloadAsZip, saveFromUrl } from '../lib/download'
+import {
+  downloadAsZip,
+  downloadCombinedZip,
+  downloadFolderZipsSeparately,
+  saveFromUrl,
+} from '../lib/download'
+import { groupByFolder, hasNamedFolders } from '../lib/folders'
 import { formatBytes, savingsPercent } from '../lib/resizeMath'
 import { Button } from './ui/Button'
 
 export function DownloadPanel() {
   const items = useImages((s) => s.items)
   const processing = useImages((s) => s.processing)
+  const mode = useImages((s) => s.mode)
   const setStep = useImages((s) => s.setStep)
   const reset = useImages((s) => s.reset)
   const [zipping, setZipping] = useState(false)
@@ -14,50 +21,48 @@ export function DownloadPanel() {
   const done = useMemo(() => items.filter((i) => i.status === 'done' && i.output), [items])
   const targetCount = items.filter((i) => i.status !== 'unsupported').length
   const errors = items.filter((i) => i.status === 'error').length
+  const folders = mode === 'folders' && hasNamedFolders(items)
+  const groups = useMemo(() => (folders ? groupByFolder(items) : []), [folders, items])
 
   const totals = useMemo(() => {
     const originalSize = done.reduce((sum, i) => sum + i.originalSize, 0)
     const outputSize = done.reduce((sum, i) => sum + (i.output?.size ?? 0), 0)
-    return {
-      originalSize,
-      outputSize,
-      saved: savingsPercent(originalSize, outputSize),
-    }
+    return { originalSize, outputSize, saved: savingsPercent(originalSize, outputSize) }
   }, [done])
 
-  async function handleDownload() {
+  async function withZipping(fn: () => Promise<void>) {
+    setZipping(true)
+    try {
+      await fn()
+    } finally {
+      setZipping(false)
+    }
+  }
+
+  async function handleDownloadFlat() {
     if (done.length === 0) return
     if (done.length === 1) {
       const only = done[0].output!
       saveFromUrl(only.url, only.name)
       return
     }
-    setZipping(true)
-    try {
-      await downloadAsZip(
-        done.map((i) => ({ name: i.output!.name, blob: i.output!.blob })),
-      )
-    } finally {
-      setZipping(false)
-    }
+    await withZipping(() =>
+      downloadAsZip(done.map((i) => ({ name: i.output!.name, blob: i.output!.blob }))),
+    )
   }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       {processing ? (
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-800">
-            Optimizando imágenes…
-          </h2>
+          <h2 className="text-xl font-semibold text-slate-800">Optimizando imágenes…</h2>
           <p className="mt-1 text-sm text-slate-500">
             {done.length} de {targetCount} listas
           </p>
           <div className="mx-auto mt-4 h-2 w-full max-w-md overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full bg-brand-500 transition-all"
-              style={{
-                width: `${targetCount ? (done.length / targetCount) * 100 : 0}%`,
-              }}
+              style={{ width: `${targetCount ? (done.length / targetCount) * 100 : 0}%` }}
             />
           </div>
         </div>
@@ -65,7 +70,9 @@ export function DownloadPanel() {
         <div className="flex flex-col items-center gap-5 text-center md:flex-row md:justify-between md:text-left">
           <div>
             <h2 className="text-xl font-semibold text-slate-800">
-              ¡Listo! {done.length} {done.length === 1 ? 'imagen' : 'imágenes'} optimizadas
+              {folders
+                ? `¡Listo! ${groups.length} ${groups.length === 1 ? 'carpeta' : 'carpetas'} · ${done.length} imágenes`
+                : `¡Listo! ${done.length} ${done.length === 1 ? 'imagen' : 'imágenes'} optimizadas`}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               {formatBytes(totals.originalSize)} → {formatBytes(totals.outputSize)}
@@ -74,31 +81,55 @@ export function DownloadPanel() {
                   {totals.saved}% menos
                 </span>
               )}
-              {errors > 0 && (
-                <span className="ml-2 text-red-600">· {errors} con error</span>
+              {errors > 0 && <span className="ml-2 text-red-600">· {errors} con error</span>}
+              {folders && (
+                <span className="ml-2 block text-xs text-slate-400 md:inline">
+                  Cada carpeta tiene su botón de ZIP arriba.
+                </span>
               )}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button variant="secondary" onClick={() => setStep('optimize')}>
-              Ajustar
-            </Button>
             <Button variant="ghost" onClick={reset}>
               Nueva sesión
             </Button>
-            <Button
-              size="lg"
-              onClick={() => void handleDownload()}
-              disabled={done.length === 0 || zipping}
-            >
-              <DownloadIcon />
-              {zipping
-                ? 'Preparando ZIP…'
-                : done.length > 1
-                  ? 'Descargar todo (ZIP)'
-                  : 'Descargar imagen'}
+            <Button variant="secondary" onClick={() => setStep('optimize')}>
+              Ajustar
             </Button>
+            {folders ? (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => void withZipping(() => downloadFolderZipsSeparately(groups))}
+                  disabled={done.length === 0 || zipping}
+                >
+                  <DownloadIcon />
+                  Un .zip por carpeta
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => void withZipping(() => downloadCombinedZip(groups))}
+                  disabled={done.length === 0 || zipping}
+                >
+                  <DownloadIcon />
+                  {zipping ? 'Preparando…' : 'Todo en un .zip'}
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="lg"
+                onClick={() => void handleDownloadFlat()}
+                disabled={done.length === 0 || zipping}
+              >
+                <DownloadIcon />
+                {zipping
+                  ? 'Preparando ZIP…'
+                  : done.length > 1
+                    ? 'Descargar todo (ZIP)'
+                    : 'Descargar imagen'}
+              </Button>
+            )}
           </div>
         </div>
       )}
